@@ -1,15 +1,15 @@
 # 🧬 Single-Cell RNA-seq Tutorial Collection
 
-> A structured reference guide covering three foundational tutorials for scRNA-seq preprocessing, data structures, and downstream analysis using Galaxy, AnnData, and Scanpy/scverse.
+> A structured reference guide covering scRNA-seq preprocessing, data structures, and downstream analysis using Galaxy, AnnData, and Scanpy/scverse.
 
 ---
 
 ## 📚 Table of Contents
 
 - [Overview](#overview)
-- [Tutorial 1 — 10X scRNA Preprocessing (Galaxy)](#tutorial-1--pre-processing-of-10x-single-cell-rna-datasets-galaxy)
-- [Tutorial 2 — Getting Started with AnnData](#tutorial-2--getting-started-with-anndata)
-- [Tutorial 3 — Basic scRNA Analysis (scverse / Scanpy)](#tutorial-3--basic-scrna-tutorial-scverse--scanpy)
+- [1 — 10X scRNA Preprocessing (Galaxy)](#1--pre-processing-of-10x-single-cell-rna-datasets-galaxy)
+- [2 — Getting Started with AnnData](#2--getting-started-with-anndata)
+- [3 — Basic scRNA Analysis (scverse / Scanpy)](#3--basic-scrna-tutorial-scverse--scanpy)
 - [Tool Summary Across Tutorials](#tool-summary-across-tutorials)
 - [Recommended Learning Order](#recommended-learning-order)
 
@@ -17,24 +17,21 @@
 
 ## Overview
 
-| # | Tutorial | Platform | Dataset | Difficulty |
-|---|----------|----------|---------|------------|
-| 1 | [Pre-processing of 10X scRNA Datasets](https://training.galaxyproject.org/training-material/topics/single-cell/tutorials/scrna-preprocessing-tenx/tutorial.html) | Galaxy (web-based, no coding) | 1k PBMCs from 10x Genomics (v3) | Beginner |
-| 2 | [Getting Started with AnnData](https://anndata.readthedocs.io/en/latest/tutorials/notebooks/getting-started.html) | Python / Jupyter Notebook | Simulated (100 cells × 2000 genes) | Beginner–Intermediate |
-| 3 | [Basic scRNA Tutorial](https://scverse-tutorials.readthedocs.io/en/latest/notebooks/basic-scrna-tutorial.html) | Python / Jupyter (Scanpy + scverse) | Multi-sample PBMC dataset | Intermediate |
+| # | Tutorial | Platform | Dataset | 
+|---|----------|----------|---------|
+| 1 | [Pre-processing of 10X scRNA Datasets](https://training.galaxyproject.org/training-material/topics/single-cell/tutorials/scrna-preprocessing-tenx/tutorial.html) | Galaxy (web-based, no coding) | 1k PBMCs from 10x Genomics (v3) | 
+| 2 | [Getting Started with AnnData](https://anndata.readthedocs.io/en/latest/tutorials/notebooks/getting-started.html) | Python / Jupyter Notebook | Simulated (100 cells × 2000 genes) | 
+| 3 | [Basic scRNA Tutorial](https://scverse-tutorials.readthedocs.io/en/latest/notebooks/basic-scrna-tutorial.html) | Python / Jupyter (Scanpy + scverse) | Multi-sample PBMC dataset | 
 
 ---
 ---
 
-# Tutorial 1 — Pre-processing of 10X Single-Cell RNA Datasets (Galaxy)
+#  1 — Pre-processing of 10X Single-Cell RNA Datasets (Galaxy)
 
 🔗 **Link:** https://training.galaxyproject.org/training-material/topics/single-cell/tutorials/scrna-preprocessing-tenx/tutorial.html
 
-**Authors:** Wendi Bacon, Pavankumar Videm, Mehmet Tekman, Hans-Rudolf Hotz, Daniel Blankenberg
-**Last Updated:** April 29, 2025 | **License:** CC-BY-4.0
-
-### 🎯 Objective
-Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count matrix using the Galaxy platform — no programming required.
+###  Objective
+Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count matrix using the Galaxy platform.
 
 ### 🧾 Dataset
 - **Source:** 1k PBMCs from a Healthy Donor (10x Genomics, v3 chemistry)
@@ -50,7 +47,7 @@ Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count mat
 | `L002_R2_001.fastq.gz` | L002 | R2 | cDNA Sequences |
 | `L002_I1_001.fastq.gz` | L002 | I1 | Illumina Lane Info |
 
-> ⚠️ RNA STARsolo does **not** need the I1 files. They are used by Cell Ranger only.
+> RNA STARsolo does **not** need the I1 files. They are used by Cell Ranger only.
 
 ---
 
@@ -76,7 +73,6 @@ Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count mat
 | **Output** | Count matrix · Feature Statistic Summaries · BAM file · Log files |
 | **Result** | ~5200 raw barcodes detected; 272 pass default quality threshold |
 
-> 💡 STARsolo is a drop-in replacement for Cell Ranger — much faster and no complex configuration needed.
 
 ---
 
@@ -140,7 +136,7 @@ FASTQ Files (R1 + R2, 2 lanes)
 
 ---
 
-### 📦 Tools Used
+### Tools Used
 
 | Tool | Version | Purpose |
 |------|---------|---------|
@@ -151,16 +147,15 @@ FASTQ Files (R1 + R2, 2 lanes)
 ---
 ---
 
-# Tutorial 2 — Getting Started with AnnData
+#  2 — Getting Started with AnnData
 
 🔗 **Link:** https://anndata.readthedocs.io/en/latest/tutorials/notebooks/getting-started.html
 
-**Authors:** Adam Gayoso, Alex Wolf
 **Install:** `pip install anndata` or `conda install anndata -c conda-forge`
 
 ---
 
-### 🎯 What Is AnnData and Why Does It Matter?
+###  What Is AnnData and Why Does It Matter?
 
 AnnData (Annotated Data) is the **standard data container** for single-cell analysis in Python. Almost every major Python-based scRNA-seq tool — Scanpy, scVI, CellTypist, Decoupler — stores and reads data as AnnData objects.
 
