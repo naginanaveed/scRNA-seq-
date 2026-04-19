@@ -1,10 +1,10 @@
-# 🧬 Single-Cell RNA-seq Tutorial Collection
+# 🧬 Single-Cell RNA-seq 
 
 > A structured reference guide covering scRNA-seq preprocessing, data structures, and downstream analysis using Galaxy, AnnData, and Scanpy/scverse.
 
 ---
 
-## 📚 Table of Contents
+##  Table of Contents
 
 - [Overview](#overview)
 - [1 — 10X scRNA Preprocessing (Galaxy)](#1--pre-processing-of-10x-single-cell-rna-datasets-galaxy)
@@ -628,13 +628,8 @@ sc.tl.leiden(adata, resolution=0.5, key_added="leiden_res0_5")
 sc.pl.umap(adata, color="leiden_res0_5", legend_loc="on data")
 ```
 
-**What is Leiden clustering?**
-Leiden is a graph community detection algorithm that partitions the neighborhood graph into groups of highly connected cells. Unlike k-means, you do not need to specify the number of clusters in advance. Instead, you control granularity with the `resolution` parameter:
-
 - **Low resolution** (e.g., 0.1–0.3) → fewer, larger clusters capturing major cell lineages
 - **High resolution** (e.g., 0.8–1.5) → more, smaller clusters resolving fine cell subtypes
-
-The cluster labels are added as a column in `adata.obs`. It is common practice to run Leiden at multiple resolutions and compare before settling on one that matches your biological question.
 
 ---
 
@@ -650,63 +645,37 @@ The **dotplot** visualization provides a compact summary:
 - **Dot size** = fraction of cells in the cluster that express the gene (detection rate)
 - **Dot color** = mean expression level in expressing cells
 
-Together these help you identify the distinguishing genes per cluster and look them up in known cell type databases.
-
 ---
 
 #### Step 14 — Cell Type Annotation
 
-Once marker genes are identified, you assign biological identities to the clusters. Three methods are shown in this tutorial:
+Once marker genes are identified, you assign biological identities to the clusters.
 
-**Method A — Manual annotation using known marker genes:**
-```python
-marker_genes = {
-    "B cells": ["MS4A1", "CD79A"],
-    "T cells": ["CD3D", "CD3E"],
-    "Monocytes": ["LYZ", "CD14"],
-    "NK cells": ["NKG7", "GNLY"]
-}
-sc.pl.umap(adata, color=["MS4A1", "CD3D", "LYZ", "NKG7"])
-```
-You overlay the expression of known marker genes on the UMAP. Clusters where `MS4A1` is highly expressed are B cells, clusters where `CD3D` is high are T cells, and so on. This approach requires prior biological knowledge of what cell types to expect in the tissue.
+Method A — Manual annotation using known marker genes
+Method B — Automated annotation with CellTypist
+Method C — Transcription factor activity scoring with Decoupler
 
-**Method B — Automated annotation with CellTypist:**
-```python
-predictions = celltypist.annotate(adata, model="Immune_All_Low.pkl", majority_voting=True)
-adata.obs["celltypist_cell_type"] = predictions.predicted_labels
-```
-CellTypist uses a logistic regression model trained on thousands of annotated single-cell immune datasets to predict cell type labels for each cell automatically. The `majority_voting=True` option takes the most common prediction within each Leiden cluster as the consensus label, smoothing out individual cell noise. This is useful as a first-pass annotation especially when you are less familiar with the expected cell types.
-
-**Method C — Transcription factor activity scoring with Decoupler:**
-```python
-dc.run_mlm(mat=adata, net=net, source="source", target="target", weight="weight")
-acts = dc.pp.get_obsm(adata, "score_mlm")
-sc.pl.umap(acts, color=["majority_voting", "B cells", "T cells", "Monocytes"])
-```
-Instead of looking at raw gene expression, Decoupler infers the activity of transcription factors (TFs) or biological pathways from the expression patterns of their target genes. This adds a mechanistic layer of interpretation — rather than just observing that cluster 3 expresses MS4A1, you can confirm that it has high activity of the B cell master regulator PAX5, strengthening the annotation. Decoupler results also help discover regulatory biology beyond just assigning cell type names.
-
-The three methods are complementary: use CellTypist for a quick automated first pass, confirm with manual markers on the UMAP, and use Decoupler to gain mechanistic insight.
 
 ---
 
-### Full Pipeline Summary Table
+###  Full Pipeline Summary Table
 
-| Step | Function | What It Does | Result Stored In |
-|------|----------|-------------|-----------------|
-| 1. Load | `sc.read_h5ad()` | Read count matrix + metadata from disk | `adata` object |
-| 2. Tag genes | `adata.var["mt"] = ...` | Label mitochondrial / ribosomal / hemoglobin genes | `adata.var` new columns |
-| 3. QC metrics | `sc.pp.calculate_qc_metrics()` | Compute per-cell quality statistics | `adata.obs` new columns |
-| 4. Filter | `sc.pp.filter_cells/genes()` | Remove low-quality cells and rare genes | Smaller filtered `adata` |
-| 5. Doublets | `sc.pp.scrublet()` | Score each cell as likely singlet or doublet | `adata.obs["doublet_score"]` |
-| 6. Normalize | `normalize_total()` + `log1p()` | Remove sequencing depth bias; stabilize variance | Updated `adata.X` |
-| 7. HVG | `sc.pp.highly_variable_genes()` | Select 2000 most variable genes for analysis | `adata.var["highly_variable"]` |
-| 8. Scale | `sc.pp.scale()` | Zero mean, unit variance per gene | Updated `adata.X` |
-| 9. PCA | `sc.pp.pca()` | Compress 2000 genes → 50 PCA dimensions | `adata.obsm["X_pca"]` |
-| 10. Neighbors | `sc.pp.neighbors()` | Build KNN graph connecting similar cells | `adata.obsp["distances/connectivities"]` |
-| 11. UMAP | `sc.tl.umap()` | Project cells to 2D for visualization | `adata.obsm["X_umap"]` |
-| 12. Cluster | `sc.tl.leiden()` | Partition graph into cell communities | `adata.obs["leiden_res0_5"]` |
-| 13. Markers | `sc.tl.rank_genes_groups()` | Find genes distinguishing each cluster | `adata.uns["rank_genes_groups"]` |
-| 14. Annotate | CellTypist / Decoupler / manual | Assign biological cell type names to clusters | `adata.obs["cell_type"]` |
+| Step | Function | Input | Output |
+|------|----------|-------|--------|
+| 1. Load | `sc.read_h5ad()` | `.h5ad` file | AnnData |
+| 2. QC Metrics | `sc.pp.calculate_qc_metrics()` | Raw AnnData | QC columns in `.obs` |
+| 3. Filter | `sc.pp.filter_cells/genes()` | AnnData + QC metrics | Filtered AnnData |
+| 4. Doublet Detection | `sc.pp.scrublet()` | Filtered AnnData | `doublet_score` in `.obs` |
+| 5. Normalize | `sc.pp.normalize_total()` + `log1p()` | Filtered counts | Normalized `.X` |
+| 6. HVG Selection | `sc.pp.highly_variable_genes()` | Normalized AnnData | `highly_variable` in `.var` |
+| 7. Scale | `sc.pp.scale()` | HVG-subset | Zero-mean, unit-variance `.X` |
+| 8. PCA | `sc.pp.pca()` | Scaled AnnData | `X_pca` in `.obsm` |
+| 9. Neighbors | `sc.pp.neighbors()` | PCA embedding | KNN graph in `.obsp` |
+| 10. UMAP | `sc.tl.umap()` | KNN graph | `X_umap` in `.obsm` |
+| 11. Cluster | `sc.tl.leiden()` | KNN graph | Cluster labels in `.obs` |
+| 12. Marker Genes | `sc.tl.rank_genes_groups()` | Clusters | Ranked genes in `.uns` |
+| 13. Annotate | CellTypist / manual | Marker genes + UMAP | Cell type labels in `.obs` |
+
 
 ---
 
@@ -732,5 +701,3 @@ The three methods are complementary: use CellTypist for a quick automated first 
 - Tekman et al. (2020). *A single-cell RNA-sequencing training and analysis suite using the Galaxy framework*. GigaScience. doi: 10.1093/gigascience/giaa102
 
 ---
-
-*README compiled from official tutorial documentation. For issues or updates, refer to the original tutorial links above.*
