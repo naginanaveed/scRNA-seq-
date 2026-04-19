@@ -33,7 +33,7 @@
 ###  Objective
 Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count matrix using the Galaxy platform.
 
-### 🧾 Dataset
+###  Dataset
 - **Source:** 1k PBMCs from a Healthy Donor (10x Genomics, v3 chemistry)
 - **Tutorial subset:** ~300 cells (sub-sampled for training speed)
 - **Input files (6 FASTQ):**
@@ -168,7 +168,7 @@ Think of AnnData as a spreadsheet where:
 
 ---
 
-### 🏗️ AnnData Object Structure
+### AnnData Object Structure
 
 ```
 AnnData  (n_obs × n_vars = 100 × 2000)
@@ -378,22 +378,6 @@ adata = ad.read_h5ad("my_data.h5ad") # Load it back
 
 **What is `.h5ad`?**
 AnnData's native file format is `.h5ad`, an HDF5-based binary file. HDF5 supports hierarchical storage of arrays, DataFrames, and dictionaries — a perfect fit for the AnnData structure. Saving to `.h5ad` preserves ALL slots (`.X`, `.obs`, `.var`, `.obsm`, `.obsp`, `.layers`, `.uns`) in one portable file, making it easy to share data and resume analysis without rerunning computations.
-
----
-
-### AnnData Attribute Reference Table
-
-| Attribute | Shape | Type | What It Stores | Real Example |
-|-----------|-------|------|---------------|--------------|
-| `.X` | (n_obs × n_vars) | Sparse/dense matrix | Core expression counts | Raw UMI counts |
-| `.obs` | (n_obs × cols) | Pandas DataFrame | Cell metadata | `cell_type`, `batch`, `n_genes`, `pct_mt` |
-| `.var` | (n_vars × cols) | Pandas DataFrame | Gene metadata | `highly_variable`, `mean`, `chromosome` |
-| `.obsm` | (n_obs × k) per key | Dict of arrays | Multi-dim cell data | `X_umap`, `X_pca`, `X_tsne` |
-| `.varm` | (n_vars × k) per key | Dict of arrays | Multi-dim gene data | `PCs` (PCA loadings) |
-| `.obsp` | (n_obs × n_obs) per key | Dict of sparse matrices | Cell-cell relationships | `distances`, `connectivities` |
-| `.varp` | (n_vars × n_vars) per key | Dict of sparse matrices | Gene-gene relationships | Gene regulatory network |
-| `.layers` | (n_obs × n_vars) per key | Dict of matrices | Alternative count matrices | `counts`, `log1p`, `scaled` |
-| `.uns` | Unstructured | Dict | Free-form metadata | Analysis params, color maps, DE results |
 
 ---
 ---
