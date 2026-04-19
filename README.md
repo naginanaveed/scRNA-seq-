@@ -226,6 +226,13 @@ counts = csr_matrix(np.random.poisson(1, size=(100, 2000)), dtype=np.float32)
 adata = ad.AnnData(counts)
 # AnnData object with n_obs × n_vars = 100 × 2000
 ```
+| Field | Value |
+|-------|-------|
+| **Input** | Sparse count matrix (100 × 2000) |
+| **Output** | `AnnData object with n_obs × n_vars = 100 × 2000` |
+| **Access data** | `adata.X` → sparse matrix |
+
+---
 
 **What's happening here:**
 `np.random.poisson(1, size=(100, 2000))` generates a 100×2000 matrix of random integer counts drawn from a Poisson distribution — this mimics real gene expression counts, which are naturally count data and highly sparse. `csr_matrix(...)` converts it to Compressed Sparse Row format for memory efficiency. `ad.AnnData(counts)` wraps this matrix into an AnnData object, accessible as `adata.X`.
@@ -241,8 +248,7 @@ adata.obs_names = [f"Cell_{i:d}" for i in range(adata.n_obs)]
 adata.var_names = [f"Gene_{i:d}" for i in range(adata.n_vars)]
 ```
 
-**Why this matters:**
-Every cell and gene must have a **unique string identifier**. These names serve as the shared index across all annotations, embeddings, and graphs inside the object. When you compute a UMAP, filter cells, or look up gene metadata later, AnnData uses these names to keep everything aligned. Functions in the scverse ecosystem raise warnings if `obs_names` or `var_names` are not unique.
+Every cell and gene must have a **unique string identifier**. These names serve as the shared index across all annotations, embeddings, and graphs inside the object. 
 
 In real data, `obs_names` are typically **cell barcodes** (e.g., `AAACATACAACCAC-1`) and `var_names` are **gene IDs or gene symbols** (e.g., `BRCA1`, `ENSG00000012048`).
 
@@ -255,12 +261,11 @@ ct = np.random.choice(["B", "T", "Monocyte"], size=(adata.n_obs,))
 adata.obs["cell_type"] = pd.Categorical(ct)
 ```
 
-**What's happening and why:**
+**Explanation:**
 `.obs` is a Pandas DataFrame where each row is a cell. You can add any number of columns to it — cell type, donor ID, batch, sequencing depth, QC pass/fail flags, etc. Adding metadata here keeps it permanently linked to the cells it describes, so if you later filter or subset cells, the metadata follows automatically.
 
 Using `pd.Categorical` is recommended for columns with repeated string values (like cell types) because it saves memory by storing the unique categories once and referring to them by integer codes internally.
 
-In a real scRNA workflow, `.obs` grows throughout the analysis — first you add QC metrics, then doublet scores, then cluster assignments, then final cell type annotations.
 
 ```
          cell_type
@@ -276,9 +281,10 @@ Cell_2         B
 ```python
 adata.var["mt"] = adata.var_names.str.startswith("MT-")  # real-world example
 ```
-
-**What's happening and why:**
-`.var` works exactly like `.obs` but for genes. In real data you store things like: whether a gene is highly variable, whether it's a mitochondrial gene, its chromosome location, or alternative gene symbols. For example, Scanpy's `pp.highly_variable_genes()` adds a column `highly_variable = True/False` to `.var`, and PCA automatically uses this column to restrict computation to only those genes — so the metadata in `.var` directly drives downstream analysis steps.
+| Attribute | Shape | Purpose |
+|-----------|-------|---------|
+| `.obsm["X_umap"]` | (100, 2) | 2D UMAP embedding per cell |
+| `.varm["gene_stuff"]` | (2000, 5) | 5-dim gene metadata |
 
 ---
 
@@ -289,7 +295,6 @@ adata.obsm["X_umap"] = np.random.normal(0, 1, size=(adata.n_obs, 2))
 adata.varm["gene_stuff"] = np.random.normal(0, 1, size=(adata.n_vars, 5))
 ```
 
-**Why `.obsm` instead of `.obs`?**
 `.obs` can only hold one value per cell per column (a scalar or a string). But dimensionality reduction produces a whole vector per cell — UMAP gives 2 coordinates, PCA might give 50 components. You cannot put a 50-dimensional vector into a single DataFrame cell.
 
 `.obsm` (observation matrix) is a dictionary of arrays where each value has shape `(n_cells, k)`. The key name is arbitrary — by convention:
@@ -308,7 +313,7 @@ adata.varm["gene_stuff"] = np.random.normal(0, 1, size=(adata.n_vars, 5))
 adata.obsp["distances"] = sparse_distance_matrix  # shape: (100, 100)
 ```
 
-**Why is this needed?**
+**Explanation**
 Many scRNA algorithms operate on graphs rather than on gene expression directly. When Scanpy's `pp.neighbors()` runs, it computes a distance matrix and connectivity matrix between all pairs of cells and stores them in `.obsp["distances"]` and `.obsp["connectivities"]`. Leiden clustering and UMAP then use this graph — so `.obsp` is a critical intermediate storage location in any standard pipeline.
 
 `.varp` does the equivalent for gene-gene relationships, used for gene co-expression or regulatory network analysis.
@@ -321,10 +326,12 @@ Many scRNA algorithms operate on graphs rather than on gene expression directly.
 adata.layers["log_transformed"] = np.log1p(adata.X)
 ```
 
-**What is a layer and why use it?**
-Layers let you store multiple versions of your count matrix at the same time. During a typical pipeline, you may want to preserve the raw integer counts while also having normalized and log-transformed versions. Instead of creating separate objects (which risk getting out of sync), AnnData layers store all versions together, each with the same shape and aligned to the same cells and genes.
+| Input | Output |
+|-------|--------|
+| Raw count matrix | Log1p-transformed layer stored alongside original `.X` |
 
-In practice:
+---
+
 - `adata.layers["counts"]` → original raw integer counts (preserved)
 - `adata.X` → log-normalized counts (actively used by analysis functions)
 - `adata.layers["scaled"]` → zero-mean, unit-variance matrix (used by PCA)
@@ -339,7 +346,6 @@ You can retrieve any layer as a Pandas DataFrame: `adata.to_df(layer="log_transf
 adata.uns["random"] = {"arbitrary_key": "arbitrary_value"}
 ```
 
-**What goes in `.uns`?**
 `.uns` (unstructured) is a free-form dictionary for anything that doesn't fit neatly into the other slots. Typical uses include: analysis parameters (e.g., number of neighbors used for KNN graph), color palettes for cell type plotting, differential expression results from `rank_genes_groups`, and general experiment metadata like species, tissue, or protocol information.
 
 ---
@@ -354,7 +360,7 @@ subset = adata[["Cell_1", "Cell_10"], ["Gene_5", "Gene_1900"]]
 t_cells = adata[adata.obs["cell_type"] == "T"]
 ```
 
-**Views vs. Copies — an important distinction:**
+**Views vs. Copies :**
 Subsetting returns a **view**, not a copy. A view is a window into the original object — no data is duplicated in memory. This is efficient when you just want to inspect a subset. However, if you want an independent object that you can modify without affecting the original, you must explicitly call `.copy()`:
 ```python
 t_cells = adata[adata.obs["cell_type"] == "T"].copy()
@@ -375,7 +381,7 @@ AnnData's native file format is `.h5ad`, an HDF5-based binary file. HDF5 support
 
 ---
 
-### 📊 AnnData Attribute Reference Table
+### AnnData Attribute Reference Table
 
 | Attribute | Shape | Type | What It Stores | Real Example |
 |-----------|-------|------|---------------|--------------|
@@ -392,7 +398,7 @@ AnnData's native file format is `.h5ad`, an HDF5-based binary file. HDF5 support
 ---
 ---
 
-# Tutorial 3 — Basic scRNA Tutorial (scverse / Scanpy)
+#  3 — Basic scRNA Tutorial (scverse / Scanpy)
 
 🔗 **Link:** https://scverse-tutorials.readthedocs.io/en/latest/notebooks/basic-scrna-tutorial.html
 
@@ -401,15 +407,13 @@ AnnData's native file format is `.h5ad`, an HDF5-based binary file. HDF5 support
 
 ---
 
-### 🎯 What Does This Tutorial Cover?
+## Objective
+Perform a full scRNA-seq analysis pipeline — from raw count data to annotated cell clusters — using Scanpy. Covers QC, normalization, dimensionality reduction, clustering, and cell type annotation.
 
-This tutorial walks through a complete, real-world scRNA-seq analysis pipeline — from a raw count matrix all the way to biologically annotated cell clusters. Unlike Tutorial 1 (which produces the count matrix) and Tutorial 2 (which teaches the data structure), this tutorial focuses on **what you actually do with the data after you have it** — cleaning it, reducing its dimensions, finding groups of similar cells, and figuring out which cell types those groups represent.
-
-It follows current best practices in the scverse ecosystem and uses multi-sample PBMC data, so it also addresses batch handling.
 
 ---
 
-### 🧾 Dataset
+###  Dataset
 
 | Property | Value |
 |----------|-------|
@@ -449,6 +453,10 @@ import celltypist
 adata = sc.read_h5ad("pbmc_data.h5ad")
 print(adata)
 ```
+| Input | Output |
+|-------|--------|
+| `.h5ad` count matrix file | AnnData object loaded into memory |
+
 
 The `.h5ad` file already contains the gene × cell count matrix plus basic metadata (sample IDs, etc.). After loading, you inspect the object to understand: how many cells and genes it contains, what columns already exist in `.obs`, and whether the data looks reasonable before any processing.
 
@@ -493,7 +501,7 @@ sc.pp.filter_genes(adata, min_cells=3)
 adata = adata[adata.obs["pct_counts_mt"] < 20].copy()
 ```
 
-**What each filter does and why:**
+**Explanation:**
 
 - `min_genes=200`: Removes cells that express fewer than 200 genes. No real cell should express fewer than a few hundred genes — these are empty droplets or failed captures. Keeping them would pollute the analysis with noise.
 
@@ -510,6 +518,10 @@ The exact thresholds vary by tissue, species, and protocol — you should always
 ```python
 sc.pp.scrublet(adata)
 ```
+| Tool | Input | Output |
+|------|-------|--------|
+| `Scrublet` (via Scanpy) | Filtered count matrix | `doublet_score` + `predicted_doublet` added to `adata.obs` |
+
 
 **What is a doublet?**
 A doublet occurs when two cells are co-captured in one droplet and sequenced as a single unit. They appear as cells with roughly double the gene count of typical cells and can create spurious clusters or distort real ones in downstream analysis — so detecting and removing them is important.
@@ -531,14 +543,10 @@ sc.pp.log1p(adata)                             # log(x + 1) transformation
 adata.layers["log1p_norm"] = adata.X.copy()   # save this version as a layer
 ```
 
-**Why normalize?**
-Raw count data has a major technical problem: different cells were sequenced to different depths. One cell might have 5,000 total UMI counts and another might have 20,000 — not because the second cell actually expresses more, but because it happened to be sequenced more deeply. If you don't correct for this, highly sequenced cells will falsely appear more similar to each other than to shallowly sequenced cells of the same type.
-
-**Step 1 — Count depth normalization (`normalize_total`):** Rescales each cell's counts so that every cell sums to the same total (10,000 counts). After this, a gene with count 50 means the same proportion of expression in every cell, making cells comparable.
-
-**Step 2 — Log1p transformation:** After normalization, gene expression is still heavily right-skewed — a few highly expressed genes have values hundreds of times larger than most genes. Log-transforming with `log(x + 1)` (the +1 prevents log(0)) compresses this scale, making expression values more normally distributed and better suited for PCA and other linear methods that assume approximate normality.
-
-After saving the normalized version as `layers["log1p_norm"]`, the raw integer counts should also be preserved (typically in `layers["counts"]`) for methods that require them.
+| Step | Method | Input | Output |
+|------|--------|-------|--------|
+| Count depth scaling | Normalize to 10k per cell | Raw filtered counts | Depth-normalized matrix |
+| Log transformation | log1p | Normalized matrix | Log-normalized matrix in `.X` |
 
 ---
 
@@ -547,15 +555,15 @@ After saving the normalized version as `layers["log1p_norm"]`, the raw integer c
 ```python
 sc.pp.highly_variable_genes(adata, n_top_genes=2000, batch_key="sample")
 ```
+| Input | Output |
+|-------|--------|
+| Normalized AnnData | `highly_variable` boolean column added to `adata.var` |
+| `n_top_genes=2000` | Top 2000 most variable genes selected for downstream analysis |
 
 **Why select features?**
 Human cells express roughly 20,000 genes, but the vast majority either are not expressed at all or are expressed at a constant level across all cells (housekeeping genes like ribosomal proteins). These uninformative genes add noise without contributing any information about cell type differences.
 
 Highly Variable Genes (HVGs) are genes whose expression level differs significantly across cells — they are the genes that actually distinguish one cell type from another. By selecting only the top 2,000 most variable genes, you reduce the working dimensionality from ~20,000 to 2,000, remove noise, and make downstream computations (PCA, UMAP, clustering) much faster and more meaningful.
-
-The `batch_key="sample"` argument is important for multi-sample data: it selects genes that are variable *within* each sample before combining results across samples. This prevents the selection from being dominated by genes that merely differ between batches rather than between real cell types.
-
-After this step, `adata.var["highly_variable"]` is a boolean column. All subsequent steps (scaling, PCA) automatically operate only on these 2,000 genes.
 
 ---
 
@@ -565,10 +573,9 @@ After this step, `adata.var["highly_variable"]` is a boolean column. All subsequ
 sc.pp.scale(adata, max_value=10)
 ```
 
-**Why scale?**
 Even after normalization and log transformation, different genes still have very different mean expression levels and variances. PCA is sensitive to absolute scale — a gene with large variance would dominate the principal components simply because its values are larger, not because it is biologically more important.
 
-Scaling transforms each gene to have zero mean and unit variance across all cells. After scaling, each gene contributes equally to PCA regardless of its original expression level. The `max_value=10` clips extreme outliers to prevent them from distorting the scaled space.
+- Scaling transforms each gene to have zero mean and unit variance across all cells. After scaling, each gene contributes equally to PCA regardless of its original expression level. The `max_value=10` clips extreme outliers to prevent them from distorting the scaled space.
 
 ---
 
@@ -579,12 +586,13 @@ sc.pp.pca(adata)
 sc.pl.pca_variance_ratio(adata, n_pcs=50)
 ```
 
-**What is PCA doing here?**
-Even with 2,000 genes, the data is still very high-dimensional, and much of that variation is redundant (correlated genes carry similar information). Principal Component Analysis (PCA) finds the directions in gene-expression space that explain the most variation and represents each cell as a point in this lower-dimensional space.
+| Input | Output |
+|-------|--------|
+| HVG-subset, scaled matrix | PCA embedding stored in `adata.obsm["X_pca"]` |
+| Elbow plot | Guides how many PCs to use downstream (typically 15–50) |
 
-The result is stored in `adata.obsm["X_pca"]` — each cell now has a vector of ~50 PCA scores instead of 2,000 gene values. This compact representation captures most of the biological variation while dramatically reducing noise and computation time.
 
-The **variance ratio plot** (elbow plot) shows how much variance each principal component explains. You look for the "elbow" where the curve flattens — this tells you how many PCs carry real biological signal (typically 15–40 PCs). Using too few PCs loses signal; using too many adds noise back in.
+The **variance ratio plot** (elbow plot) shows how much variance each principal component explains.
 
 ---
 
@@ -593,9 +601,6 @@ The **variance ratio plot** (elbow plot) shows how much variance each principal 
 ```python
 sc.pp.neighbors(adata, n_neighbors=15, n_pcs=40)
 ```
-
-**What is the neighborhood graph?**
-This is the most critical structural step before clustering and UMAP. The concept is simple: cells that are similar in PCA space should be connected. For each cell, Scanpy finds its `n_neighbors` (15 here) nearest neighbors in PCA space and connects them with edges, building a graph where nodes are cells and edges connect similar cells.
 
 This graph is the foundation for all downstream steps — both UMAP and Leiden clustering operate on this graph. The results are stored in `adata.obsp["distances"]` and `adata.obsp["connectivities"]`.
 
@@ -609,9 +614,6 @@ The `n_pcs` parameter tells Scanpy how many principal components to use when com
 sc.tl.umap(adata)
 sc.pl.umap(adata, color="sample")
 ```
-
-**What is UMAP?**
-UMAP (Uniform Manifold Approximation and Projection) takes the neighborhood graph and projects cells into 2D in a way that preserves local structure — cells that are neighbors in high-dimensional PCA space stay close together in 2D. The result is a scatter plot where groups of similar cells appear as visual islands or clusters.
 
 UMAP is used for **visualization only** — the actual clustering (Step 12) is done on the graph, not the UMAP coordinates. The 2D layout is not quantitatively reliable for measuring distances between cells (two islands might be far apart on UMAP even if they share many marker genes). However, UMAP is invaluable for checking that your preprocessing worked and for visualizing cluster assignments and gene expression patterns.
 
@@ -642,10 +644,6 @@ The cluster labels are added as a column in `adata.obs`. It is common practice t
 sc.tl.rank_genes_groups(adata, groupby="leiden_res0_5", method="wilcoxon")
 sc.pl.rank_genes_groups_dotplot(adata, n_genes=5)
 ```
-
-**What are marker genes?**
-Now that you have clusters, you need to understand what biological cell type each cluster represents. Marker genes are genes that are significantly more highly expressed in one cluster compared to all others — they are the molecular "signature" of each cluster.
-
 `rank_genes_groups` performs a Wilcoxon rank-sum test (recommended for scRNA-seq data) for each gene in each cluster versus all other clusters. Results are stored in `adata.uns["rank_genes_groups"]` as ranked lists of differentially expressed genes per cluster.
 
 The **dotplot** visualization provides a compact summary:
@@ -691,7 +689,7 @@ The three methods are complementary: use CellTypist for a quick automated first 
 
 ---
 
-### 📊 Full Pipeline Summary Table
+### Full Pipeline Summary Table
 
 | Step | Function | What It Does | Result Stored In |
 |------|----------|-------------|-----------------|
@@ -712,7 +710,7 @@ The three methods are complementary: use CellTypist for a quick automated first 
 
 ---
 
-### 📦 Packages Used
+### Packages Used
 
 | Package | Role |
 |---------|------|
@@ -725,36 +723,6 @@ The three methods are complementary: use CellTypist for a quick automated first 
 ---
 ---
 
-## Tool Summary Across Tutorials
-
-| Tool / Package | Tutorial 1 (Galaxy) | Tutorial 2 (AnnData) | Tutorial 3 (Scanpy) |
-|----------------|--------------------|-----------------------|---------------------|
-| RNA STARsolo | ✅ Core aligner | ❌ | ❌ |
-| DropletUtils | ✅ Barcode filtering | ❌ | ❌ |
-| AnnData | Output format | ✅ Core focus | ✅ Data container |
-| Scanpy | ❌ | ❌ | ✅ Core framework |
-| Scrublet | ❌ | ❌ | ✅ Doublet detection |
-| CellTypist | ❌ | ❌ | ✅ Cell type annotation |
-| Decoupler | ❌ | ❌ | ✅ TF activity scoring |
-| Galaxy Platform | ✅ | ❌ | ❌ |
-| Python / Jupyter | ❌ | ✅ | ✅ |
-
----
-
-## Recommended Learning Order
-
-```
-[Tutorial 1]  →  [Tutorial 2]  →  [Tutorial 3]
- Galaxy 10X        AnnData           Scanpy
- Preprocessing     Data Structure    Full Analysis
- (No coding)       (Python basics)   (Advanced Python)
-```
-
-1. **Start with Tutorial 1** if you are new to scRNA-seq — covers the biology and data flow from raw FASTQ to count matrix without any programming.
-2. **Do Tutorial 2** to understand the AnnData object, which is the universal data container for all Python-based tools. You cannot use Tutorial 3 effectively without understanding `.obs`, `.obsm`, `.layers`, etc.
-3. **Proceed to Tutorial 3** for a complete end-to-end Python analysis pipeline following current best practices — from loading counts through clustering and biological annotation.
-
----
 
 ## 📖 References
 
