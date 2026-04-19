@@ -113,6 +113,12 @@ Learn to preprocess 10x Genomics scRNA-seq FASTQ files into a filtered count mat
 
 ---
 
+
+<img width="400" height="400" alt="Galaxy48- DropletUtils Plot on dataset 38-40" src="https://github.com/user-attachments/assets/0f9a4f70-4e8e-4fa5-aa2f-0c32c5b46cc7" />
+
+---
+<img width="400" height="400" alt="Galaxy52- DropletUtils Plot on dataset 38-40" src="https://github.com/user-attachments/assets/5c36036b-ac65-4666-8158-566e6bd99770" />
+
 ### 📊 Workflow Summary
 
 ```
